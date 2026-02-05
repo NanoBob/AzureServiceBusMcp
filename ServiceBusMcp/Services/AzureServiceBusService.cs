@@ -4,6 +4,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.Options;
 using ServiceBusMcp.Exceptions;
+using System.Text.Json;
 
 namespace ServiceBusMcp.Services;
 
@@ -71,6 +72,9 @@ public class AzureServiceBusService : IAzureServiceBusService
             {
                 if (message.MessageId == messageId)
                 {
+                    // Save message content to disk
+                    await SaveMessageContentToDiskAsync(message);
+
                     var replayMessage = new ServiceBusMessage(message);
 
                     if (!replayMessage.ApplicationProperties.ContainsKey("ResubmittedVia"))
@@ -115,6 +119,9 @@ public class AzureServiceBusService : IAzureServiceBusService
 
             foreach (var message in messages)
             {
+                // Save message content to disk
+                await SaveMessageContentToDiskAsync(message);
+
                 var replayMessage = new ServiceBusMessage(message);
 
                 if (!replayMessage.ApplicationProperties.ContainsKey("ResubmittedVia"))
@@ -189,6 +196,55 @@ public class AzureServiceBusService : IAzureServiceBusService
             await receiver.AbandonMessageAsync(message);
 
         return messageCollector;
+    }
+
+    private async Task SaveMessageContentToDiskAsync(ServiceBusReceivedMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(options.Value.DeadletterMessageStoragePath))
+            return;
+
+        var storagePath = options.Value.DeadletterMessageStoragePath;
+        
+        // Create directory if it doesn't exist
+        Directory.CreateDirectory(storagePath);
+
+        // Create a unique filename using timestamp and message ID
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+        var sanitizedMessageId = SanitizeFileName(message.MessageId);
+        var fileName = $"{timestamp}_{sanitizedMessageId}.json";
+        var filePath = Path.Combine(storagePath, fileName);
+
+        // Prepare message data for storage
+        var messageData = new
+        {
+            message.MessageId,
+            message.CorrelationId,
+            message.Subject,
+            message.ContentType,
+            Body = message.Body.ToString(),
+            message.EnqueuedTime,
+            message.DeadLetterReason,
+            message.DeadLetterErrorDescription,
+            message.ApplicationProperties,
+            SavedAt = DateTime.UtcNow
+        };
+
+        // Serialize and save to file
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(messageData, jsonOptions);
+        await File.WriteAllTextAsync(filePath, json);
+    }
+
+    private string SanitizeFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return "no-id";
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        
+        // Limit length to avoid path issues
+        return sanitized.Length > 50 ? sanitized.Substring(0, 50) : sanitized;
     }
 
     private void ThrowIfDisallowed(string queueName)

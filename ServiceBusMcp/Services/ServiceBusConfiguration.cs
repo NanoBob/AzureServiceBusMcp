@@ -6,4 +6,5 @@ public class ServiceBusConfiguration
     public required HashSet<string> AllowedQueues { get; init; }
     public required HashSet<string> AllowedReplayQueues { get; init; }
     public bool TryConnectOnStartup { get; init; }
+    public string? DeadletterMessageStoragePath { get; init; }
 }

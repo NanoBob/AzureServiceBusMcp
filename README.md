@@ -26,10 +26,17 @@ Create or update your `appsettings.json` file with your Service Bus configuratio
 {
   "ServiceBus": {
     "ConnectionString": "your-service-bus-connection-string",
-    "Namespace": "your-service-bus-namespace"
+    "Namespace": "your-service-bus-namespace",
+    "DeadletterMessageStoragePath": "/path/to/store/deadletter/messages"
   }
 }
 ```
+
+**Configuration Options:**
+- `ConnectionString`: Your Service Bus connection string (optional if using Azure Identity)
+- `Namespace`: Your Service Bus namespace
+- `DeadletterMessageStoragePath`: (Optional) Path where deadletter message contents will be saved when resubmitted. If not specified, messages will not be saved to disk.
+
 
 ### Authentication
 
