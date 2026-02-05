@@ -13,8 +13,8 @@ This tool is deliberately limited in its capabilities, since sending ServiceBus 
 - **GetDeadletterMessageCount** - Get the number of dead letter messages in a queue
 - **GetMessages** - Retrieve messages from a Service Bus queue (active messages only)
 - **GetDeadletterMessages** - Retrieve dead letter messages from a queue
-- **ResubmitDeadletterMessage** - Resubmit a specific dead letter message back to the active queue
-- **ResubmitAllDeadletterMessages** - Resubmit all dead letter messages on a queue back to the active queue
+- **ResubmitDeadletterMessage** - Resubmit a specific dead letter message back to the active queue (saves a copy of the message content to disk if configured)
+- **ResubmitAllDeadletterMessages** - Resubmit all dead letter messages on a queue back to the active queue (saves copies of message contents to disk if configured)
 
 ## Configuration
 
