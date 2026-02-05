@@ -35,7 +35,7 @@ Create or update your `appsettings.json` file with your Service Bus configuratio
 **Configuration Options:**
 - `ConnectionString`: Your Service Bus connection string (optional if using Azure Identity)
 - `Namespace`: Your Service Bus namespace
-- `DeadletterMessageStoragePath`: (Optional) Path where deadletter message contents will be saved when resubmitted. If not specified, messages will not be saved to disk.
+- `DeadletterMessageStoragePath`: (Optional) Base path where deadletter message contents will be saved when resubmitted. Messages are organized in subdirectories by year/month/day/queue. If not specified, messages will not be saved to disk.
 
 
 ### Authentication

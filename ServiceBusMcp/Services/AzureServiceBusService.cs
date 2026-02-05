@@ -72,8 +72,7 @@ public class AzureServiceBusService : IAzureServiceBusService
             {
                 if (message.MessageId == messageId)
                 {
-                    // Save message content to disk
-                    await SaveMessageContentToDiskAsync(message);
+                    await SaveMessageContentToDiskAsync(message, queue);
 
                     var replayMessage = new ServiceBusMessage(message);
 
@@ -119,8 +118,7 @@ public class AzureServiceBusService : IAzureServiceBusService
 
             foreach (var message in messages)
             {
-                // Save message content to disk
-                await SaveMessageContentToDiskAsync(message);
+                await SaveMessageContentToDiskAsync(message, queue);
 
                 var replayMessage = new ServiceBusMessage(message);
 
@@ -198,25 +196,28 @@ public class AzureServiceBusService : IAzureServiceBusService
         return messageCollector;
     }
 
-    private async Task SaveMessageContentToDiskAsync(ServiceBusReceivedMessage message)
+    private async Task SaveMessageContentToDiskAsync(ServiceBusReceivedMessage message, string queue)
     {
         if (string.IsNullOrWhiteSpace(options.Value.DeadletterMessageStoragePath))
             return;
 
         try
         {
-            var storagePath = options.Value.DeadletterMessageStoragePath;
+            var basePath = options.Value.DeadletterMessageStoragePath;
+            var now = DateTime.UtcNow;
             
-            // Create directory if it doesn't exist
+            var year = now.ToString("yyyy");
+            var month = now.ToString("MM");
+            var day = now.ToString("dd");
+            
+            var storagePath = Path.Combine(basePath, year, month, day, queue);
             Directory.CreateDirectory(storagePath);
 
-            // Create a unique filename using timestamp (with milliseconds) and message ID
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
+            var timestamp = now.ToString("yyyyMMdd_HHmmss_fff");
             var sanitizedMessageId = SanitizeFileName(message.MessageId);
             var fileName = $"{timestamp}_{sanitizedMessageId}.json";
             var filePath = Path.Combine(storagePath, fileName);
 
-            // Get message body content, handling both text and binary
             string bodyContent;
             try
             {
@@ -224,12 +225,10 @@ public class AzureServiceBusService : IAzureServiceBusService
             }
             catch
             {
-                // If ToString fails, try to get raw bytes and encode as Base64
                 var bytes = message.Body.ToArray();
                 bodyContent = Convert.ToBase64String(bytes);
             }
 
-            // Prepare message data for storage
             var messageData = new
             {
                 message.MessageId,
@@ -241,10 +240,9 @@ public class AzureServiceBusService : IAzureServiceBusService
                 message.DeadLetterReason,
                 message.DeadLetterErrorDescription,
                 message.ApplicationProperties,
-                SavedAt = DateTime.UtcNow
+                SavedAt = now
             };
 
-            // Serialize and save to file
             var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(messageData, jsonOptions);
             await File.WriteAllTextAsync(filePath, json);
@@ -252,7 +250,6 @@ public class AzureServiceBusService : IAzureServiceBusService
         catch (Exception)
         {
             // Ignore storage errors to prevent resubmission failures
-            // The message will still be resubmitted even if storage fails
         }
     }
 
