@@ -203,36 +203,57 @@ public class AzureServiceBusService : IAzureServiceBusService
         if (string.IsNullOrWhiteSpace(options.Value.DeadletterMessageStoragePath))
             return;
 
-        var storagePath = options.Value.DeadletterMessageStoragePath;
-        
-        // Create directory if it doesn't exist
-        Directory.CreateDirectory(storagePath);
-
-        // Create a unique filename using timestamp and message ID
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-        var sanitizedMessageId = SanitizeFileName(message.MessageId);
-        var fileName = $"{timestamp}_{sanitizedMessageId}.json";
-        var filePath = Path.Combine(storagePath, fileName);
-
-        // Prepare message data for storage
-        var messageData = new
+        try
         {
-            message.MessageId,
-            message.CorrelationId,
-            message.Subject,
-            message.ContentType,
-            Body = message.Body.ToString(),
-            message.EnqueuedTime,
-            message.DeadLetterReason,
-            message.DeadLetterErrorDescription,
-            message.ApplicationProperties,
-            SavedAt = DateTime.UtcNow
-        };
+            var storagePath = options.Value.DeadletterMessageStoragePath;
+            
+            // Create directory if it doesn't exist
+            Directory.CreateDirectory(storagePath);
 
-        // Serialize and save to file
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(messageData, jsonOptions);
-        await File.WriteAllTextAsync(filePath, json);
+            // Create a unique filename using timestamp (with milliseconds) and message ID
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
+            var sanitizedMessageId = SanitizeFileName(message.MessageId);
+            var fileName = $"{timestamp}_{sanitizedMessageId}.json";
+            var filePath = Path.Combine(storagePath, fileName);
+
+            // Get message body content, handling both text and binary
+            string bodyContent;
+            try
+            {
+                bodyContent = message.Body.ToString();
+            }
+            catch
+            {
+                // If ToString fails, try to get raw bytes and encode as Base64
+                var bytes = message.Body.ToArray();
+                bodyContent = Convert.ToBase64String(bytes);
+            }
+
+            // Prepare message data for storage
+            var messageData = new
+            {
+                message.MessageId,
+                message.CorrelationId,
+                message.Subject,
+                message.ContentType,
+                Body = bodyContent,
+                message.EnqueuedTime,
+                message.DeadLetterReason,
+                message.DeadLetterErrorDescription,
+                message.ApplicationProperties,
+                SavedAt = DateTime.UtcNow
+            };
+
+            // Serialize and save to file
+            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(messageData, jsonOptions);
+            await File.WriteAllTextAsync(filePath, json);
+        }
+        catch (Exception)
+        {
+            // Ignore storage errors to prevent resubmission failures
+            // The message will still be resubmitted even if storage fails
+        }
     }
 
     private string SanitizeFileName(string fileName)
@@ -244,7 +265,7 @@ public class AzureServiceBusService : IAzureServiceBusService
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
         
         // Limit length to avoid path issues
-        return sanitized.Length > 50 ? sanitized.Substring(0, 50) : sanitized;
+        return sanitized.Length > 50 ? sanitized[..50] : sanitized;
     }
 
     private void ThrowIfDisallowed(string queueName)
