@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="ServiceBusMcp.Http/ServiceBusMcp.Http.csproj" Id="b6a54d6e-99a8-4fb2-8073-3a23d9374285" />
+  <Project Path="ServiceBusMcp.Stdio/ServiceBusMcp.Stdio.csproj" Id="af3258ce-4a25-43fc-89f3-bc38b16ad456" />
   <Project Path="ServiceBusMcp/ServiceBusMcp.csproj" />
 </Solution>

@@ -7,11 +7,11 @@ using System.Text.Json;
 namespace ServiceBusMcp.Tools;
 
 [McpServerToolType]
-public static class ServiceBusTools
+public class ServiceBusTools(IAzureServiceBusService serviceBus)
 {
     [McpServerTool(Name = nameof(GetMessageCount))]
     [Description("Gets the number of messages in a Service Bus queue.")]
-    public static async Task<string> GetMessageCount(IAzureServiceBusService serviceBus, string queue)
+    public async Task<string> GetMessageCount(string queue)
     {
         try
         {
@@ -25,7 +25,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetDeadletterMessageCount))]
     [Description("Gets the number of deadletter messages in a Service Bus queue.")]
-    public static async Task<string> GetDeadletterMessageCount(IAzureServiceBusService serviceBus, string queue)
+    public async Task<string> GetDeadletterMessageCount(string queue)
     {
         try
         {
@@ -39,7 +39,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetMessages))]
     [Description("Gets messages from a Service Bus queue. This only returns messages from the regular queue, not deadletters")]
-    public static async Task<string> GetMessages(IAzureServiceBusService serviceBus, string queue)
+    public async Task<string> GetMessages(string queue)
     {
         try
         {
@@ -73,7 +73,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetMessagesContaining))]
     [Description("Gets messages from a Service Bus queue that contain a specific search string. This only returns messages from the regular queue, not deadletters")]
-    public static async Task<string> GetMessagesContaining(IAzureServiceBusService serviceBus, string queue, string search)
+    public async Task<string> GetMessagesContaining(string queue, string search)
     {
         try
         {
@@ -108,7 +108,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetDeadletterMessages))]
     [Description("Gets deadletter messages from a Service Bus queue. This only returns messages from the deadletter queue, not the main queue.")]
-    public static async Task<string> GetDeadletterMessages(IAzureServiceBusService serviceBus, string queue)
+    public async Task<string> GetDeadletterMessages(string queue)
     {
         try
         {
@@ -142,7 +142,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetDeadletterMessagesContaining))]
     [Description("Gets deadletter messages from a Service Bus queue that contain a specific search string, this only returns messages from the deadletter queue, not the main queue.")]
-    public static async Task<string> GetDeadletterMessagesContaining(IAzureServiceBusService serviceBus, string queue, string search)
+    public async Task<string> GetDeadletterMessagesContaining(string queue, string search)
     {
         try
         {
@@ -177,7 +177,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(GetQueues))]
     [Description("Gets all (allowed) queues in the servicebus namespace")]
-    public static async Task<object> GetQueues(IAzureServiceBusService serviceBus)
+    public async Task<object> GetQueues()
     {
         try
         {
@@ -191,7 +191,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(ResubmitDeadletterMessage))]
     [Description("Resubmits a deadletter message from a Service Bus deadletter queue back to the main queue.")]
-    public static async Task<string> ResubmitDeadletterMessage(IAzureServiceBusService serviceBus, string queue, string messageId)
+    public async Task<string> ResubmitDeadletterMessage(string queue, string messageId)
     {
         try
         {
@@ -205,7 +205,7 @@ public static class ServiceBusTools
 
     [McpServerTool(Name = nameof(ResubmitAllDeadletterMessage))]
     [Description("Resubmits all deadletter messages on a Service Bus deadletter queue back to the main queue.")]
-    public static async Task<string> ResubmitAllDeadletterMessage(IAzureServiceBusService serviceBus, string queue)
+    public async Task<string> ResubmitAllDeadletterMessage(string queue)
     {
         try
         {
