@@ -1,0 +1,46 @@
+trigger:
+- main
+pr:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+
+stages:
+- stage: Build
+  displayName: 'Build application'
+  jobs:
+  - job: Build
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '10.x'
+        includePreviewVersions: true
+        
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet restore'
+      inputs:
+        command: 'restore'
+        feedsToUse: 'select'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet build'
+      inputs:
+        command: 'build'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet publish'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: '**/*.csproj'
+        arguments: '--configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output $(Build.ArtifactStagingDirectory)'
+    
+    - task: PublishBuildArtifacts@1
+      displayName: 'publish artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'application'
+        publishLocation: 'Container'
