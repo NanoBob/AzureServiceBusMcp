@@ -5,7 +5,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that p
 This tool is deliberately limited in its capabilities, since sending ServiceBus messages is a potentially sensitive operation.
 
 > [!WARNING] 
-> The HTTP project in this repo currently runs without any authentication, it is not advised you run this, it's mostly here to serve as an example of how to use HTTP transport.
+> The HTTP (non-authenticated) project in this repo runs without any authentication, it is not advised you run this in production, it's mostly here to serve as a basic example of how to use HTTP transport.
 
 ## Features
 
