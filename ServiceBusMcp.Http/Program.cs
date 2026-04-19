@@ -19,10 +19,14 @@ builder.Services
 
 builder.Services
     .AddMcpServer()
-    .WithHttpTransport()
-    .WithToolsFromAssembly(typeof(ServiceBusTools).Assembly);
+    .WithToolsFromAssembly(typeof(ServiceBusTools).Assembly)
+    .WithHttpTransport(options =>
+    {
+        options.Stateless = true;
+    });
 
 var app = builder.Build();
+
 app.MapMcp("/mcp");
 
 if (builder.Configuration.GetValue<bool>("TryConnectOnStartup"))

@@ -8,8 +8,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- This package is used to allow HTTP transport -->
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
 		<PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
+
+		<PackageReference Include="Microsoft.AspNetCore.Authorization" Version="10.0.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.6" />
 
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0-preview.2.26159.112" />
 	</ItemGroup>
