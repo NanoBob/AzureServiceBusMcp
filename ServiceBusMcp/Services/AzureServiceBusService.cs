@@ -4,6 +4,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.Options;
 using ServiceBusMcp.Exceptions;
+using System.Text.Json;
 
 namespace ServiceBusMcp.Services;
 
@@ -71,6 +72,8 @@ public class AzureServiceBusService : IAzureServiceBusService
             {
                 if (message.MessageId == messageId)
                 {
+                    await SaveMessageContentToDiskAsync(message, queue);
+
                     var replayMessage = new ServiceBusMessage(message);
 
                     if (!replayMessage.ApplicationProperties.ContainsKey("ResubmittedVia"))
@@ -115,6 +118,8 @@ public class AzureServiceBusService : IAzureServiceBusService
 
             foreach (var message in messages)
             {
+                await SaveMessageContentToDiskAsync(message, queue);
+
                 var replayMessage = new ServiceBusMessage(message);
 
                 if (!replayMessage.ApplicationProperties.ContainsKey("ResubmittedVia"))
@@ -189,6 +194,75 @@ public class AzureServiceBusService : IAzureServiceBusService
             await receiver.AbandonMessageAsync(message);
 
         return messageCollector;
+    }
+
+    private async Task SaveMessageContentToDiskAsync(ServiceBusReceivedMessage message, string queue)
+    {
+        if (string.IsNullOrWhiteSpace(options.Value.DeadletterMessageStoragePath))
+            return;
+
+        try
+        {
+            var basePath = options.Value.DeadletterMessageStoragePath;
+            var now = DateTime.UtcNow;
+            
+            var year = now.ToString("yyyy");
+            var month = now.ToString("MM");
+            var day = now.ToString("dd");
+            
+            var storagePath = Path.Combine(basePath, year, month, day, queue);
+            Directory.CreateDirectory(storagePath);
+
+            var timestamp = now.ToString("yyyyMMdd_HHmmss_fff");
+            var sanitizedMessageId = SanitizeFileName(message.MessageId);
+            var fileName = $"{timestamp}_{sanitizedMessageId}.json";
+            var filePath = Path.Combine(storagePath, fileName);
+
+            string bodyContent;
+            try
+            {
+                bodyContent = message.Body.ToString();
+            }
+            catch
+            {
+                var bytes = message.Body.ToArray();
+                bodyContent = Convert.ToBase64String(bytes);
+            }
+
+            var messageData = new
+            {
+                message.MessageId,
+                message.CorrelationId,
+                message.Subject,
+                message.ContentType,
+                Body = bodyContent,
+                message.EnqueuedTime,
+                message.DeadLetterReason,
+                message.DeadLetterErrorDescription,
+                message.ApplicationProperties,
+                SavedAt = now
+            };
+
+            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(messageData, jsonOptions);
+            await File.WriteAllTextAsync(filePath, json);
+        }
+        catch (Exception)
+        {
+            // Ignore storage errors to prevent resubmission failures
+        }
+    }
+
+    private string SanitizeFileName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return "no-id";
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        
+        // Limit length to avoid path issues
+        return sanitized.Length > 50 ? sanitized[..50] : sanitized;
     }
 
     private void ThrowIfDisallowed(string queueName)
